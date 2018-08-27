@@ -4,6 +4,7 @@
 #include <QBuffer>
 #include <QDebug>
 #include <QBitArray>
+#include "zopfli/src/zopfli/zopfli.h"
 
 PDFWriter::PDFWriter(QObject *parent, const QString fn) : QObject(parent), f(fn)
 {
@@ -40,11 +41,20 @@ bool PDFWriter::addPage(const QImage &img)
         xrefs.append(QString("%1 00000 n")
                         .arg(curOfs, 10, 10, QChar('0')));
 
-        // write image
+        // compress image
+        qDebug() << "compressing...";
         Q_ASSERT(img.format() == QImage::Format_Grayscale8);
-        QByteArray flate = qCompress(img.constBits(), img.sizeInBytes(), 9);
-        flate = flate.remove(0, 4); // remove Qt size header
+        ZopfliOptions opts;
+        unsigned char *flate = nullptr;
+        size_t flateLen = 0;
 
+        ZopfliInitOptions(&opts);
+        opts.numiterations = 15;
+        ZopfliCompress(&opts, ZOPFLI_FORMAT_ZLIB, img.constBits(),
+                       static_cast<size_t>(img.sizeInBytes()), &flate, &flateLen);
+        qDebug() << "compression done";
+
+        // write image
         curOfs += f.write(QString("%1 0 obj\n"
                                   "<<\n"
                                   "/Type /XObject\n"
@@ -61,10 +71,11 @@ bool PDFWriter::addPage(const QImage &img)
                                   .arg(img.width())
                                   .arg(img.height())
                                   .arg(img.bitPlaneCount())
-                                  .arg(flate.length())
+                                  .arg(flateLen)
                          );
 
-        curOfs += f.write(flate);
+        curOfs += f.write(flate, static_cast<qint64>(flateLen));
+        free(flate);
 
         curOfs += f.write(QString("\nendstream\n"
                               "endobj\n"));

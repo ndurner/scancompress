@@ -63,8 +63,7 @@ void Application::run()
         }
 
         qDebug() << Q_FUNC_INFO << "add page";
-        pdf.addPage(img);
-
+        pdf.addPage(img.convertToFormat(QImage::Format_Grayscale8));
     }
 
     // finish PDF

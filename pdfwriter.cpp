@@ -41,9 +41,9 @@ bool PDFWriter::addPage(const QImage &img)
                         .arg(curOfs, 10, 10, QChar('0')));
 
         // write image
-        QByteArray imgOut;
-        QBuffer imgBuffer(&imgOut);
-        img.convertToFormat(QImage::Format_RGB888).save(&imgBuffer, "JPG");
+        Q_ASSERT(img.format() == QImage::Format_Grayscale8);
+        QByteArray flate = qCompress(img.constBits(), img.sizeInBytes(), 9);
+        flate = flate.remove(0, 4); // remove Qt size header
 
         curOfs += f.write(QString("%1 0 obj\n"
                                   "<<\n"
@@ -51,9 +51,9 @@ bool PDFWriter::addPage(const QImage &img)
                                   "/Subtype /Image\n"
                                   "/Width %2\n"
                                   "/Height %3\n"
-                                  "/ColorSpace /DeviceRGB\n"
+                                  "/ColorSpace /DeviceGray\n"
                                   "/BitsPerComponent %4\n"
-                                  "/Filter /DCTDecode\n"
+                                  "/Filter /FlateDecode\n"
                                   "/Length %5\n"
                                   ">>\n"
                                   "stream\n")
@@ -61,10 +61,10 @@ bool PDFWriter::addPage(const QImage &img)
                                   .arg(img.width())
                                   .arg(img.height())
                                   .arg(img.bitPlaneCount())
-                                  .arg(imgOut.length())
+                                  .arg(flate.length())
                          );
 
-        curOfs += f.write(imgOut);
+        curOfs += f.write(flate);
 
         curOfs += f.write(QString("\nendstream\n"
                               "endobj\n"));

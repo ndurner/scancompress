@@ -22,7 +22,7 @@ bool PDFWriter::writeHeader()
     try {
         if (!f.open(QFile::WriteOnly))
             throw new File::IoErr();
-        curOfs += f.write("%PDF-1.7\n");
+        curOfs += f.write("%PDF-1.7\n%\255\255\255\255\n");
     }
     catch (File::IoErr ex) {
         return false;

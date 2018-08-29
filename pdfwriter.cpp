@@ -43,15 +43,32 @@ bool PDFWriter::addPage(const QImage &img)
 
         // compress image
         qDebug() << "compressing...";
-        Q_ASSERT(img.format() == QImage::Format_Grayscale8);
         ZopfliOptions opts;
         unsigned char *flate = nullptr;
         size_t flateLen = 0;
+        QByteArray imgData;
+
+        if (img.format() == QImage::Format_Mono) {
+            // invert pixel bits (grayscale => b/w) and write out
+            const size_t lineLen = size_t(img.width() / 8.0 + 0.5);
+            const int lineLenBits = int(lineLen * 8);
+            const QBitArray mask(lineLenBits, true);
+
+            for (int row = 0; row < img.height(); row++) {
+                QBitArray sl = QBitArray::fromBits(
+                            reinterpret_cast<const char *>(img.scanLine(row)), lineLenBits);
+                sl ^= mask;
+                imgData.append(QByteArray(sl.bits(), int(lineLen)));
+            }
+        }
+        else
+            imgData = QByteArray::fromRawData(
+                        reinterpret_cast<const char *>(img.constBits()), img.sizeInBytes());
 
         ZopfliInitOptions(&opts);
         opts.numiterations = 15;
-        ZopfliCompress(&opts, ZOPFLI_FORMAT_ZLIB, img.constBits(),
-                       static_cast<size_t>(img.sizeInBytes()), &flate, &flateLen);
+        ZopfliCompress(&opts, ZOPFLI_FORMAT_ZLIB, reinterpret_cast<const uchar *>(imgData.constData()),
+                       static_cast<size_t>(imgData.length()), &flate, &flateLen);
         qDebug() << "compression done";
 
         // write image
@@ -61,24 +78,38 @@ bool PDFWriter::addPage(const QImage &img)
                                   "/Subtype /Image\n"
                                   "/Width %2\n"
                                   "/Height %3\n"
-                                  "/ColorSpace /DeviceGray\n"
-                                  "/BitsPerComponent %4\n"
-                                  "/Filter /FlateDecode\n"
-                                  "/Length %5\n"
-                                  ">>\n"
-                                  "stream\n")
+                                  "/ColorSpace ")
                                   .arg(objIdx)
                                   .arg(img.width())
                                   .arg(img.height())
+                         );
+        if (img.format() == QImage::Format_Indexed8) {
+            curOfs += f.write(QString("[/Indexed /DeviceGray %1 <")
+                              .arg(img.colorCount() - 1));
+            // write indexed palette
+            foreach (QRgb c, img.colorTable()) {
+                curOfs += f.write(QString("%1 ")
+                              .arg(qGray(c), 2, 16, QChar('0')));
+            }
+            curOfs += f.write(">]\n");
+        }
+        else {
+            curOfs += f.write("/DeviceGray\n");
+        }
+
+        curOfs += f.write(QString("/BitsPerComponent %1\n"
+                                  "/Filter /FlateDecode\n"
+                                  "/Length %2\n"
+                                  ">>\n"
+                                  "stream\n")
                                   .arg(img.bitPlaneCount())
                                   .arg(flateLen)
                          );
 
-        curOfs += f.write(flate, static_cast<qint64>(flateLen));
-        free(flate);
-
-        curOfs += f.write(QString("\nendstream\n"
-                              "endobj\n"));
+       curOfs += f.write(flate, static_cast<qint64>(flateLen));
+       free(flate);
+       curOfs += f.write(QString("\nendstream\n"
+                                 "endobj\n"));
 
         // write page appearance stream
         xrefs.append(QString("%1 00000 n").arg(curOfs, 10, 10, QChar('0')));

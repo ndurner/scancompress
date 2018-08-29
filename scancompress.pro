@@ -30,7 +30,15 @@ SOURCES += main.cpp \
     zopfli/src/zopfli/tree.c \
     zopfli/src/zopfli/util.c \
     zopfli/src/zopfli/zlib_container.c \
-    zopfli/src/zopfli/zopfli_lib.c
+    zopfli/src/zopfli/zopfli_lib.c \
+    libimagequant/blur.c \
+    libimagequant/kmeans.c \
+    libimagequant/libimagequant.c \
+    libimagequant/mediancut.c \
+    libimagequant/mempool.c \
+    libimagequant/nearest.c \
+    libimagequant/pam.c \
+    imageoptimizer.cpp
 
 HEADERS += \
     application.h \
@@ -49,4 +57,12 @@ HEADERS += \
     zopfli/src/zopfli/tree.h \
     zopfli/src/zopfli/util.h \
     zopfli/src/zopfli/zlib_container.h \
-    zopfli/src/zopfli/zopfli.h
+    zopfli/src/zopfli/zopfli.h \
+    libimagequant/blur.h \
+    libimagequant/kmeans.h \
+    libimagequant/libimagequant.h \
+    libimagequant/mediancut.h \
+    libimagequant/mempool.h \
+    libimagequant/nearest.h \
+    libimagequant/pam.h \
+    imageoptimizer.h

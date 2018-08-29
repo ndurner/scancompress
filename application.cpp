@@ -5,6 +5,7 @@
 #include <QDebug>
 
 #include "pdfwriter.h"
+#include "imageoptimizer.h"
 
 Application::Application(int &argc, char **argv) : QCoreApplication(argc, argv)
 {
@@ -13,6 +14,8 @@ Application::Application(int &argc, char **argv) : QCoreApplication(argc, argv)
     QCommandLineOption help = pars.addHelpOption();
     pars.addPositionalArgument("input", "input file");
     pars.addPositionalArgument("output", "output file");
+    pars.addOption({"indexed", "generate indexed palette"});
+    pars.addOption({"colors", "number of colors to reduce to", "colors", "255"});
 
     const bool fail = !pars.parse(arguments());
     const auto &&args = pars.positionalArguments();
@@ -25,6 +28,8 @@ Application::Application(int &argc, char **argv) : QCoreApplication(argc, argv)
 
     cfg.setInput(args[0]);
     cfg.setOutput(args[1]);
+    cfg.setIndexed(pars.isSet("indexed"));
+    cfg.setColors(pars.value("colors").toInt());
 }
 
 void Application::run()
@@ -62,8 +67,16 @@ void Application::run()
             return;
         }
 
+        // convert image
+        if (cfg.getIndexed())
+            img = ImageOptimizer::reduceColors(img, cfg.getColors());
+        else if (cfg.getColors() == 2)
+            img = img.convertToFormat(QImage::Format_Mono);
+        else
+            img = img.convertToFormat(QImage::Format_Grayscale8);
+
         qDebug() << Q_FUNC_INFO << "add page";
-        pdf.addPage(img.convertToFormat(QImage::Format_Grayscale8));
+        pdf.addPage(img);
     }
 
     // finish PDF

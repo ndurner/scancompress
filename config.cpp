@@ -24,3 +24,23 @@ void Config::setOutput(const QString &output)
 {
     m_output = output;
 }
+
+bool Config::getIndexed() const
+{
+    return indexed;
+}
+
+void Config::setIndexed(bool value)
+{
+    indexed = value;
+}
+
+int Config::getColors() const
+{
+    return colors;
+}
+
+void Config::setColors(int value)
+{
+    colors = value;
+}

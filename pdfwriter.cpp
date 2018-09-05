@@ -31,7 +31,7 @@ bool PDFWriter::writeHeader()
     return true;
 }
 
-bool PDFWriter::addPage(const QImage &img)
+bool PDFWriter::addPage(const Image &img)
 {
     try {
         const auto objIdx = ++curObj;
@@ -48,27 +48,10 @@ bool PDFWriter::addPage(const QImage &img)
         size_t flateLen = 0;
         QByteArray imgData;
 
-        if (img.format() == QImage::Format_Mono) {
-            // invert pixel bits (grayscale => b/w) and write out
-            const size_t lineLen = size_t(img.width() / 8.0 + 0.5);
-            const int lineLenBits = int(lineLen * 8);
-            const QBitArray mask(lineLenBits, true);
-
-            for (int row = 0; row < img.height(); row++) {
-                QBitArray sl = QBitArray::fromBits(
-                            reinterpret_cast<const char *>(img.scanLine(row)), lineLenBits);
-                sl ^= mask;
-                imgData.append(QByteArray(sl.bits(), int(lineLen)));
-            }
-        }
-        else
-            imgData = QByteArray::fromRawData(
-                        reinterpret_cast<const char *>(img.constBits()), img.sizeInBytes());
-
         ZopfliInitOptions(&opts);
         opts.numiterations = 15;
-        ZopfliCompress(&opts, ZOPFLI_FORMAT_ZLIB, reinterpret_cast<const uchar *>(imgData.constData()),
-                       static_cast<size_t>(imgData.length()), &flate, &flateLen);
+        ZopfliCompress(&opts, ZOPFLI_FORMAT_ZLIB, reinterpret_cast<uchar *>(img.sampleData().data()),
+                      size_t(img.sampleData().length()), &flate, &flateLen);
         qDebug() << "compression done";
 
         // write image
@@ -83,11 +66,11 @@ bool PDFWriter::addPage(const QImage &img)
                                   .arg(img.width())
                                   .arg(img.height())
                          );
-        if (img.format() == QImage::Format_Indexed8) {
+        if (img.palette().length()) {
             curOfs += f.write(QString("[/Indexed /DeviceGray %1 <")
-                              .arg(img.colorCount() - 1));
+                              .arg(img.palette().length() - 1));
             // write indexed palette
-            foreach (QRgb c, img.colorTable()) {
+            foreach (QRgb c, img.palette()) {
                 curOfs += f.write(QString("%1 ")
                               .arg(qGray(c), 2, 16, QChar('0')));
             }
@@ -102,7 +85,7 @@ bool PDFWriter::addPage(const QImage &img)
                                   "/Length %2\n"
                                   ">>\n"
                                   "stream\n")
-                                  .arg(img.bitPlaneCount())
+                                  .arg(img.bps())
                                   .arg(flateLen)
                          );
 

@@ -40,7 +40,8 @@ SOURCES += main.cpp \
     libimagequant/mempool.c \
     libimagequant/nearest.c \
     libimagequant/pam.c \
-    imageoptimizer.cpp
+    imageoptimizer.cpp \
+    image.cpp
 
 HEADERS += \
     application.h \
@@ -67,4 +68,5 @@ HEADERS += \
     libimagequant/mempool.h \
     libimagequant/nearest.h \
     libimagequant/pam.h \
-    imageoptimizer.h
+    imageoptimizer.h \
+    image.h

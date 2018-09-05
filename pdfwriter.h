@@ -6,6 +6,7 @@
 #include <QVector>
 
 #include "file.h"
+#include "image.h"
 
 class PDFWriter : public QObject
 {
@@ -14,7 +15,7 @@ class PDFWriter : public QObject
 public:
     explicit PDFWriter(QObject *parent, const QString fn);
     bool writeHeader();
-    bool addPage(const QImage &img);
+    bool addPage(const Image &img);
     bool finish();
 
 signals:

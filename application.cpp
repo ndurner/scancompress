@@ -68,15 +68,10 @@ void Application::run()
         }
 
         // convert image
-        if (cfg.getIndexed())
-            img = ImageOptimizer::reduceColors(img, cfg.getColors());
-        else if (cfg.getColors() == 2)
-            img = img.convertToFormat(QImage::Format_Mono);
-        else
-            img = img.convertToFormat(QImage::Format_Grayscale8);
+        Image cvImg = ImageOptimizer::reduceColors(img, cfg.getColors(), cfg.getIndexed());
 
         qDebug() << Q_FUNC_INFO << "add page";
-        pdf.addPage(img);
+        pdf.addPage(cvImg);
     }
 
     // finish PDF

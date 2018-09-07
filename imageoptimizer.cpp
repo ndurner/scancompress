@@ -9,6 +9,7 @@
 Image ImageOptimizer::reduceColors(QImage &src, uint8_t colors, bool indexed)
 {
     QByteArray quantRet;
+    int quantScanlinePad = 0;
     Image out;
 
     if (indexed) {
@@ -55,9 +56,11 @@ Image ImageOptimizer::reduceColors(QImage &src, uint8_t colors, bool indexed)
             QImage tmp = src.convertToFormat(QImage::Format_Grayscale8);
             quantRet.setRawData(reinterpret_cast<char *>(tmp.bits()), uint(tmp.sizeInBytes()));
             quantRet.detach();
+            quantScanlinePad = tmp.bytesPerLine() - tmp.width();
         }
         else {
             quantRet.setRawData(reinterpret_cast<char *>(src.bits()), uint(src.sizeInBytes()));
+            quantScanlinePad = src.bytesPerLine() - src.width();
         }
     }
 
@@ -75,13 +78,13 @@ Image ImageOptimizer::reduceColors(QImage &src, uint8_t colors, bool indexed)
 
     qDebug() << "converting to" << out.bps() << "bits";
 
-    foreach (char sample, quantRet) {
+    for(QByteArray::iterator sample = quantRet.begin(); sample < quantRet.cend(); sample++) {
         uchar outByte;
 
         if (indexed)
-            outByte = uchar(sample);
+            outByte = uchar(*sample);
         else
-            outByte = static_cast<uchar>((uchar(sample) / 255.0) * ((1 << out.bps()) - 1));
+            outByte = static_cast<uchar>((uchar(*sample) / 255.0) * ((1 << out.bps()) - 1));
 
         outByte = uchar(outByte << (8 - out.bps()));
 
@@ -93,6 +96,8 @@ Image ImageOptimizer::reduceColors(QImage &src, uint8_t colors, bool indexed)
             byteInScanline = 0;
             bitsUsed = 0;
             outPos++;
+            if (quantScanlinePad)
+                sample += quantScanlinePad;
         }
         else {
             if (bitsUsed >= 8) {

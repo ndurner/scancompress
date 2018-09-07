@@ -3,9 +3,12 @@
 #include <QCommandLineParser>
 #include <QImageReader>
 #include <QDebug>
+#include <QtEndian>
+#include <QBuffer>
 
 #include "pdfwriter.h"
 #include "imageoptimizer.h"
+#include "tiffreader.h"
 
 Application::Application(int &argc, char **argv) : QCoreApplication(argc, argv)
 {
@@ -16,6 +19,7 @@ Application::Application(int &argc, char **argv) : QCoreApplication(argc, argv)
     pars.addPositionalArgument("output", "output file");
     pars.addOption({"indexed", "generate indexed palette"});
     pars.addOption({"colors", "number of colors to reduce to", "colors", "255"});
+    pars.addOption({"dpi", "DPI to reduce to", "dpi"});
 
     const bool fail = !pars.parse(arguments());
     const auto &&args = pars.positionalArguments();
@@ -30,6 +34,7 @@ Application::Application(int &argc, char **argv) : QCoreApplication(argc, argv)
     cfg.setOutput(args[1]);
     cfg.setIndexed(pars.isSet("indexed"));
     cfg.setColors(pars.value("colors").toInt());
+    cfg.setDpi(pars.value("dpi").toUInt());
 }
 
 void Application::run()
@@ -41,9 +46,21 @@ void Application::run()
     }
 
     // load input
-    QImageReader rd(cfg.input());
+    QFile src(cfg.input());
+    if (!src.open(QIODevice::ReadOnly)) {
+        qCritical() << "Cannot open" << cfg.input() << ":" << src.errorString();
+        qApp->exit(1);
+        return;
+    }
+
+    auto mapping = src.map(0, src.size());
+    Q_ASSERT(mapping);
+    QByteArray buf(reinterpret_cast<char *>(mapping), int(src.size()));
+
+    QBuffer buffer(&buf);
+    QImageReader rd(&buffer);
     if (!rd.canRead()) {
-        qCritical() << "Cannot open" << cfg.input() << ":" << rd.errorString();
+        qCritical() << "Cannot read" << cfg.input() << ":" << rd.errorString();
         qApp->exit(1);
         return;
     }
@@ -56,6 +73,9 @@ void Application::run()
         return;
     }
 
+    // get file DPI if TIFF
+    auto sourceDPI = TIFFReader::dpi(buf);
+
     // process individual pages
     for (auto pgCntr = rd.imageCount(); pgCntr > 0; --pgCntr, rd.jumpToNextImage()) {
         QImage img = rd.read();
@@ -65,6 +85,13 @@ void Application::run()
                         "failed:" << rd.errorString();
             qApp->exit(1);
             return;
+        }
+
+        // rescale
+        if (sourceDPI != 0 && cfg.dpi() != 0 && sourceDPI != cfg.dpi()) {
+            qDebug() << "rescaling to" << cfg.dpi() << "DPI";
+            img = img.scaledToHeight(int(uint(img.height()) / sourceDPI * cfg.dpi()),
+                                     Qt::SmoothTransformation);
         }
 
         // convert image

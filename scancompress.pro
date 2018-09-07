@@ -41,7 +41,8 @@ SOURCES += main.cpp \
     libimagequant/nearest.c \
     libimagequant/pam.c \
     imageoptimizer.cpp \
-    image.cpp
+    image.cpp \
+    tiffreader.cpp
 
 HEADERS += \
     application.h \
@@ -69,4 +70,5 @@ HEADERS += \
     libimagequant/nearest.h \
     libimagequant/pam.h \
     imageoptimizer.h \
-    image.h
+    image.h \
+    tiffreader.h

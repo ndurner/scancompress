@@ -2,6 +2,7 @@
 #define APPLICATION_H
 
 #include <QCoreApplication>
+#include <QIODevice>
 #include "config.h"
 
 class Application : public QCoreApplication
@@ -13,6 +14,8 @@ public slots:
     void run();
 
 private:
+    uint dpi(QIODevice &inp);
+
     Config cfg;
     bool initFailed;
 };

@@ -35,7 +35,7 @@ void Config::setIndexed(bool value)
     indexed = value;
 }
 
-int Config::getColors() const
+uint8_t Config::getColors() const
 {
     return colors;
 }
@@ -43,4 +43,14 @@ int Config::getColors() const
 void Config::setColors(int value)
 {
     colors = value;
+}
+
+uint Config::dpi() const
+{
+    return _dpi;
+}
+
+void Config::setDpi(const uint &dpi)
+{
+    _dpi = dpi;
 }

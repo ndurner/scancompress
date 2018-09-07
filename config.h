@@ -17,14 +17,18 @@ public:
     bool getIndexed() const;
     void setIndexed(bool value);
 
-    int getColors() const;
+    uint8_t getColors() const;
     void setColors(int value);
+
+    uint dpi() const;
+    void setDpi(const uint &dpi);
 
 private:
     QString m_input;
     QString m_output;
     bool indexed;
     int colors;
+    uint _dpi;
 };
 
 #endif // CONFIG_H
